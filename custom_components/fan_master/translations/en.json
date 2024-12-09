@@ -1,0 +1,24 @@
+{
+  "config": {
+    "title": "Fan Master",
+    "step": {
+      "user": {
+        "title": "Define your Fan Master connection",
+        "data": {
+          "host": "The ip-address of your Fan Master",
+          "name": "The prefix to be used for your Fan Master sensors",
+          "port": "The TCP port on which to connect to the Fan Master",
+		      "modbus_address": "The modbus address",
+          "scan_interval": "The modbus registers polling interval [s]",
+          "number_slaves": "Number of attached fan Devices"
+        }
+      }
+    },
+    "error": {
+      "already_configured": "Device is already configured"
+    },
+    "abort": {
+      "already_configured": "Device is already configured"
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "config": {
+    "title": "Fan Master",
+    "step": {
+      "user": {
+        "title": "Konfiguriere Deine Modbus-Verbindung zum Fan Master.",
+        "data": {
+          "host": "Die IP-Adresse des Fan Masters",
+          "name": "Das Prefix, das für Fan Master Sensoren verwendet werden soll",
+          "port": "Der TCP Port des Fan Masters (z.B. 502)",
+		      "modbus_address": "Modbus-Adresse",
+          "scan_interval": "Das Abfrageintervall der Modbus Register [s]",
+          "number_slaves": "Anzahl Angeschlossener Heizlüfter"
+        }
+      }
+    },
+    "error": {
+      "already_configured": "Der Fan Master ist bereits konfiguriert.,"
+    },
+    "abort": {
+      "already_configured": "Der Fan Master ist bereits konfiguriert."
+    }
+  }
+}

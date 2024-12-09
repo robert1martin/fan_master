@@ -1,0 +1,6 @@
+{
+    "name": "fan_master",
+    "render_readme": true,
+    "homeassistant": "2024.12.1",
+    "hacs": "2.0.1"
+  }
