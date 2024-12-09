@@ -1,8 +1,5 @@
 # fan_master
 
-[![GitHub Release][releases-shield]][releases]
-
-[![hacs][hacsbadge]][hacs]
-[![Project Maintenance][maintenance-shield]][user_profile]
+[![Releases](https://img.shields.io/github/release/robert1martin/fan_master/all.svg?style=for-the-badge)](https://github.com/robert1martin/fan_master/releases)
 
 Home Assistent Integration for Fan Master 
