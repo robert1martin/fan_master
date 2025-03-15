@@ -214,18 +214,21 @@ class FanMaster:
 
     def read_modbus_data_master_sw_Version(self, start_address=0):
         """start reading data"""
-        data_package = self.read_holding_registers(unit=self._address, address=start_address, count=3)      
+        data_package = self.read_holding_registers(unit=self._address, address=start_address, count=4)      
         if data_package.isError():
             _LOGGER.debug(f'data Error at start address {start_address}')
             return False
-        decoder = BinaryPayloadDecoder.fromRegisters(data_package.registers, byteorder=Endian.BIG)
         
-        fbl_sw_version_major = decoder.decode_8bit_uint()
-        fbl_sw_version_minor = decoder.decode_8bit_uint()
-        fbl_sw_version_patch = decoder.decode_8bit_uint()
-        appl_sw_version_major = decoder.decode_8bit_uint()
-        appl_sw_version_minor = decoder.decode_8bit_uint()
-        appl_sw_version_patch = decoder.decode_8bit_uint()
+        
+        
+        value = self._client.convert_from_registers(data_package.registers, self._client.DATATYPE.UINT64)
+        
+        fbl_sw_version_major = value >> 56
+        fbl_sw_version_minor = (value >> 48) & 0xFF
+        fbl_sw_version_patch = (value >> 40) & 0xFF
+        appl_sw_version_major = (value >> 32) & 0xFF
+        appl_sw_version_minor = (value >> 24) & 0xFF
+        appl_sw_version_patch = (value >> 16) & 0xFF
 
         self.data["fbl_sw_version"] = f"{fbl_sw_version_major}.{fbl_sw_version_minor}.{fbl_sw_version_patch}"
         self.data["appl_sw_version"] = f"{appl_sw_version_major}.{appl_sw_version_minor}.{appl_sw_version_patch}"
@@ -238,9 +241,11 @@ class FanMaster:
         if data_package.isError():
             _LOGGER.debug(f'data Error at start address {start_address}')
             return False
-        decoder = BinaryPayloadDecoder.fromRegisters(data_package.registers, byteorder=Endian.BIG)  
         
-        dtc_active = (decoder.decode_16bit_uint() != 0)
+        value = self._client.convert_from_registers(data_package.registers, self._client.DATATYPE.UINT16)
+        
+        dtc_active = (value != 0)
+        
         self.data["dtcactive"] = dtc_active
         
         return True     
@@ -251,9 +256,8 @@ class FanMaster:
         if data_package.isError():
             _LOGGER.debug(f'data Error at start address {start_address}')
             return False
-        decoder = BinaryPayloadDecoder.fromRegisters(data_package.registers, byteorder=Endian.BIG)  
-                
-        coding_value = decoder.decode_32bit_uint()
+
+        coding_value = self._client.convert_from_registers(data_package.registers, self._client.DATATYPE.UINT32)
         _LOGGER.debug(f'coding_value: {coding_value}')
         
         coding_list = bitfield(coding_value, 32)
@@ -296,6 +300,9 @@ class FanMaster:
             _LOGGER.debug(f'data Error at start address {start_address}')
             return False
         
+        
+        #string_location = self._client.convert_from_registers(data_package.registers, self._client.DATATYPE.STRING)
+        
         decoder = BinaryPayloadDecoder.fromRegisters(data_package.registers, byteorder=Endian.BIG)
 
         string_location = str(decoder.decode_string(stringSize))
@@ -315,8 +322,8 @@ class FanMaster:
         if data_package.isError():
             _LOGGER.debug(f'data Error at start address {start_address}')
             return False
-        decoder = BinaryPayloadDecoder.fromRegisters(data_package.registers, byteorder=Endian.BIG)  
-        temperature_raw = decoder.decode_16bit_int()
+        temperature_raw = self._client.convert_from_registers(data_package.registers, self._client.DATATYPE.INT16)
+        
         if (temperature_raw == 32767):
             self.data["masterworstdewpoint"] = "Error"
         else:
@@ -329,8 +336,7 @@ class FanMaster:
         if data_package.isError():
             _LOGGER.debug(f'data Error at start address {start_address}')
             return False
-        decoder = BinaryPayloadDecoder.fromRegisters(data_package.registers, byteorder=Endian.BIG)  
-        temperature_raw = decoder.decode_16bit_int()
+        temperature_raw = self._client.convert_from_registers(data_package.registers, self._client.DATATYPE.INT16)
         if (temperature_raw == 32767):
             self.data["masterlowestsupply"] = "Error"
         else:
@@ -344,9 +350,9 @@ class FanMaster:
         if data_package.isError():
             _LOGGER.debug(f'data Error at start address {start_address}')
             return False
-        decoder = BinaryPayloadDecoder.fromRegisters(data_package.registers, byteorder=Endian.BIG)  
+        value = self._client.convert_from_registers(data_package.registers, self._client.DATATYPE.UINT16)
+        dtc_active = (value != 0)
         
-        dtc_active = (decoder.decode_16bit_uint() != 0)
         self.data["coolinglocked"] = dtc_active
         
         return True   

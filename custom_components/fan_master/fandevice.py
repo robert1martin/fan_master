@@ -1,7 +1,6 @@
 import logging
 
 from pymodbus.constants import Endian
-from pymodbus.payload import BinaryPayloadDecoder
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -53,11 +52,13 @@ class FanDevice:
         if data_package.isError():
             _LOGGER.debug(f'data Error at start address {start_address}')
             return False
-        decoder = BinaryPayloadDecoder.fromRegisters(data_package.registers, byteorder=Endian.BIG)
         
-        appl_sw_version_major = decoder.decode_8bit_uint()
-        appl_sw_version_minor = decoder.decode_8bit_uint()
-        appl_sw_version_patch = decoder.decode_8bit_uint()
+        value = self._fanmaster._client.convert_from_registers(data_package.registers, self._fanmaster._client.DATATYPE.UINT32)
+        
+        appl_sw_version_major = value >> 24
+        appl_sw_version_minor = (value >> 16) & 0xFF
+        appl_sw_version_patch = (value >> 8) & 0xFF
+        not_used = value & 0xFF
 
         #_LOGGER.debug(f'read sw_Version of {self._name} : {appl_sw_version_major}.{appl_sw_version_minor}.{appl_sw_version_patch}')
         self.data["appl_sw_version"] = f"{appl_sw_version_major}.{appl_sw_version_minor}.{appl_sw_version_patch}"
@@ -70,9 +71,9 @@ class FanDevice:
         if data_package.isError():
             _LOGGER.debug(f'data Error at start address {start_address}')
             return False
-        decoder = BinaryPayloadDecoder.fromRegisters(data_package.registers, byteorder=Endian.BIG)  
         
-        dtc_active = (decoder.decode_16bit_uint() != 0)
+        value = self._fanmaster._client.convert_from_registers(data_package.registers, self._fanmaster._client.DATATYPE.UINT16)
+        dtc_active = (value != 0)
         
         #_LOGGER.debug(f'read dtc status of {self._name} : {dtc_active}')
         self.data["dtcactive"] = dtc_active
@@ -84,10 +85,10 @@ class FanDevice:
         if data_package.isError():
             _LOGGER.debug(f'data Error at start address {start_address}')
             return False
-        decoder = BinaryPayloadDecoder.fromRegisters(data_package.registers, byteorder=Endian.BIG)  
         
-        commtimeout = (decoder.decode_16bit_uint() != 0)
-        
+        value = self._fanmaster._client.convert_from_registers(data_package.registers, self._fanmaster._client.DATATYPE.UINT16)
+        commtimeout = (value != 0)
+                
         #_LOGGER.debug(f'read dtc status of {self._name} : {dtc_active}')
         self.data["commtimeout"] = commtimeout
         
@@ -98,9 +99,9 @@ class FanDevice:
         if data_package.isError():
             _LOGGER.debug(f'data Error at start address {start_address}')
             return False
-        decoder = BinaryPayloadDecoder.fromRegisters(data_package.registers, byteorder=Endian.BIG)  
         
-        sleep = (decoder.decode_16bit_uint() != 0)
+        value = self._fanmaster._client.convert_from_registers(data_package.registers, self._fanmaster._client.DATATYPE.UINT16)
+        sleep = (value != 0)
         
         #_LOGGER.debug(f'read dtc status of {self._name} : {dtc_active}')
         self.data["sleep"] = sleep
@@ -113,9 +114,8 @@ class FanDevice:
         if data_package.isError():
             _LOGGER.debug(f'data Error at start address {start_address}')
             return False
-        decoder = BinaryPayloadDecoder.fromRegisters(data_package.registers, byteorder=Endian.BIG)  
         
-        self.data["rssilast"] = decoder.decode_16bit_int()
+        self.data["rssilast"] = self._fanmaster._client.convert_from_registers(data_package.registers, self._fanmaster._client.DATATYPE.INT16)
         
         return True  
     
@@ -124,9 +124,8 @@ class FanDevice:
         if data_package.isError():
             _LOGGER.debug(f'data Error at start address {start_address}')
             return False
-        decoder = BinaryPayloadDecoder.fromRegisters(data_package.registers, byteorder=Endian.BIG)  
         
-        self.data["rssifiltered"] = decoder.decode_16bit_int()
+        self.data["rssifiltered"] = self._fanmaster._client.convert_from_registers(data_package.registers, self._fanmaster._client.DATATYPE.INT16)
         
         return True  
     
@@ -135,9 +134,8 @@ class FanDevice:
         if data_package.isError():
             _LOGGER.debug(f'data Error at start address {start_address}')
             return False
-        decoder = BinaryPayloadDecoder.fromRegisters(data_package.registers, byteorder=Endian.BIG)  
         
-        self.data["lqilast"] = decoder.decode_16bit_uint()
+        self.data["lqilast"] = self._fanmaster._client.convert_from_registers(data_package.registers, self._fanmaster._client.DATATYPE.UINT16)
         
         return True 
     
@@ -146,9 +144,8 @@ class FanDevice:
         if data_package.isError():
             _LOGGER.debug(f'data Error at start address {start_address}')
             return False
-        decoder = BinaryPayloadDecoder.fromRegisters(data_package.registers, byteorder=Endian.BIG)  
         
-        self.data["opmode"] = decoder.decode_16bit_int()
+        self.data["opmode"] = self._fanmaster._client.convert_from_registers(data_package.registers, self._fanmaster._client.DATATYPE.INT16)
             
         return True
     
@@ -156,9 +153,8 @@ class FanDevice:
         data_package = self._fanmaster.read_holding_registers(unit=self._address, address=start_address, count=1) 
         if data_package.isError():
             _LOGGER.debug(f'data Error at start address {start_address}')
-            return False
-        decoder = BinaryPayloadDecoder.fromRegisters(data_package.registers, byteorder=Endian.BIG)  
-        boostlevel = decoder.decode_16bit_uint()
+            return False        
+        boostlevel = self._fanmaster._client.convert_from_registers(data_package.registers, self._fanmaster._client.DATATYPE.UINT16)
         if (boostlevel == 0):
             self.data["boostlevel"] = "Default"
         elif (boostlevel  > 100):
@@ -173,10 +169,9 @@ class FanDevice:
         data_package = self._fanmaster.read_holding_registers(unit=self._address, address=start_address, count=1) 
         if data_package.isError():
             _LOGGER.debug(f'data Error at start address {start_address}')
-            return False
-        decoder = BinaryPayloadDecoder.fromRegisters(data_package.registers, byteorder=Endian.BIG)  
-        
-        debug = (decoder.decode_16bit_uint() != 0)
+            return False        
+        value = self._fanmaster._client.convert_from_registers(data_package.registers, self._fanmaster._client.DATATYPE.UINT16)
+        debug = (value != 0)        
         self.data["debug"] = debug
         
         return True  
@@ -186,8 +181,7 @@ class FanDevice:
         if data_package.isError():
             _LOGGER.debug(f'data Error at start address {start_address}')
             return False
-        decoder = BinaryPayloadDecoder.fromRegisters(data_package.registers, byteorder=Endian.BIG)  
-        temperature_raw = decoder.decode_16bit_int()
+        temperature_raw = self._fanmaster._client.convert_from_registers(data_package.registers, self._fanmaster._client.DATATYPE.INT16)
         if (temperature_raw == 32767):
             self.data["tempsupply"] = "Error"
         else:
@@ -200,8 +194,7 @@ class FanDevice:
         if data_package.isError():
             _LOGGER.debug(f'data Error at start address {start_address}')
             return False
-        decoder = BinaryPayloadDecoder.fromRegisters(data_package.registers, byteorder=Endian.BIG)  
-        temperature_raw = decoder.decode_16bit_int()
+        temperature_raw = self._fanmaster._client.convert_from_registers(data_package.registers, self._fanmaster._client.DATATYPE.INT16)
         if (temperature_raw == 32767):
             self.data["tempsupplyraw"] = "Error"
         else:
@@ -214,8 +207,7 @@ class FanDevice:
         if data_package.isError():
             _LOGGER.debug(f'data Error at start address {start_address}')
             return False
-        decoder = BinaryPayloadDecoder.fromRegisters(data_package.registers, byteorder=Endian.BIG)  
-        temperature_raw = decoder.decode_16bit_int()
+        temperature_raw = self._fanmaster._client.convert_from_registers(data_package.registers, self._fanmaster._client.DATATYPE.INT16)
         if (temperature_raw == 32767):
             self.data["tempreturn"] = "Error"
         else:
@@ -228,8 +220,7 @@ class FanDevice:
         if data_package.isError():
             _LOGGER.debug(f'data Error at start address {start_address}')
             return False
-        decoder = BinaryPayloadDecoder.fromRegisters(data_package.registers, byteorder=Endian.BIG)  
-        temperature_raw = decoder.decode_16bit_int()
+        temperature_raw = self._fanmaster._client.convert_from_registers(data_package.registers, self._fanmaster._client.DATATYPE.INT16)
         if (temperature_raw == 32767):
             self.data["temproom"] = "Error"
         else:
@@ -241,9 +232,8 @@ class FanDevice:
         data_package = self._fanmaster.read_holding_registers(unit=self._address, address=start_address, count=1) 
         if data_package.isError():
             _LOGGER.debug(f'data Error at start address {start_address}')
-            return False
-        decoder = BinaryPayloadDecoder.fromRegisters(data_package.registers, byteorder=Endian.BIG)  
-        humidity_raw = decoder.decode_16bit_uint()
+            return False 
+        humidity_raw = self._fanmaster._client.convert_from_registers(data_package.registers, self._fanmaster._client.DATATYPE.UINT16)
         if (humidity_raw >= 65533):
             self.data["humidity"] = "Error"
         else:
@@ -255,9 +245,8 @@ class FanDevice:
         data_package = self._fanmaster.read_holding_registers(unit=self._address, address=start_address, count=1) 
         if data_package.isError():
             _LOGGER.debug(f'data Error at start address {start_address}')
-            return False
-        decoder = BinaryPayloadDecoder.fromRegisters(data_package.registers, byteorder=Endian.BIG)  
-        temperature_raw = decoder.decode_16bit_int()
+            return False 
+        temperature_raw = self._fanmaster._client.convert_from_registers(data_package.registers, self._fanmaster._client.DATATYPE.INT16)
         if (temperature_raw == 32765 or temperature_raw == 32767):
             self.data["dewpoint"] = "Error"
         else:
@@ -269,10 +258,8 @@ class FanDevice:
         data_package = self._fanmaster.read_holding_registers(unit=self._address, address=start_address, count=1) 
         if data_package.isError():
             _LOGGER.debug(f'data Error at start address {start_address}')
-            return False
-        decoder = BinaryPayloadDecoder.fromRegisters(data_package.registers, byteorder=Endian.BIG)  
-        
-        speed = decoder.decode_16bit_uint()
+            return False        
+        speed = self._fanmaster._client.convert_from_registers(data_package.registers, self._fanmaster._client.DATATYPE.UINT16)
         if (speed == 65534):
             self.data[f"fan{fan}rpm"] = "NotAttached"
         elif (speed == 65535):
@@ -287,9 +274,7 @@ class FanDevice:
         if data_package.isError():
             _LOGGER.debug(f'data Error at start address {start_address}')
             return False
-        decoder = BinaryPayloadDecoder.fromRegisters(data_package.registers, byteorder=Endian.BIG)  
-
-        speed = decoder.decode_16bit_uint()
+        speed = self._fanmaster._client.convert_from_registers(data_package.registers, self._fanmaster._client.DATATYPE.UINT16)
         if (speed == 65535):
             self.data[f"fanspeed"] = "Error"
             
@@ -302,9 +287,7 @@ class FanDevice:
         if data_package.isError():
             _LOGGER.debug(f'data Error at start address {start_address}')
             return False
-        decoder = BinaryPayloadDecoder.fromRegisters(data_package.registers, byteorder=Endian.BIG)  
-
-        mode = decoder.decode_16bit_uint()
+        mode = self._fanmaster._client.convert_from_registers(data_package.registers, self._fanmaster._client.DATATYPE.UINT16)
         modeString = ""
         if (mode == 0): modeString  = "Off"
         elif (mode == 1): modeString  = "Boost"
@@ -319,10 +302,10 @@ class FanDevice:
         data_package = self._fanmaster.read_holding_registers(unit=self._address, address=start_address, count=1) 
         if data_package.isError():
             _LOGGER.debug(f'data Error at start address {start_address}')
-            return False
-        decoder = BinaryPayloadDecoder.fromRegisters(data_package.registers, byteorder=Endian.BIG)  
-
-        window = (decoder.decode_16bit_uint() != 0)
+            return False        
+        
+        value = self._fanmaster._client.convert_from_registers(data_package.registers, self._fanmaster._client.DATATYPE.UINT16)
+        window = (value != 0)
         self.data["window"] = window
         
         return True
