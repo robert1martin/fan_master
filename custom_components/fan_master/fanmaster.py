@@ -5,7 +5,6 @@ from datetime import timedelta
 
 from pymodbus.client import ModbusTcpClient
 from pymodbus.constants import Endian
-from pymodbus.payload import BinaryPayloadDecoder
 
 from homeassistant.core import callback
 from homeassistant.helpers.event import async_track_time_interval
@@ -300,14 +299,8 @@ class FanMaster:
             _LOGGER.debug(f'data Error at start address {start_address}')
             return False
         
+        string_location = self._client.convert_from_registers(data_package.registers, self._client.DATATYPE.STRING)
         
-        #string_location = self._client.convert_from_registers(data_package.registers, self._client.DATATYPE.STRING)
-        
-        decoder = BinaryPayloadDecoder.fromRegisters(data_package.registers, byteorder=Endian.BIG)
-
-        string_location = str(decoder.decode_string(stringSize))
-        string_location = string_location.split("\\x00")[0]             # find end character "\x00" and cut befor 
-        string_location = string_location.split("'")[1]                 # remove "b'" at start of string
         if (string_location == ""):
             self.data[f"location_{index}"] = "no location in Parameter"
         else:
