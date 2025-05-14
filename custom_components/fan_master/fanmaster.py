@@ -1,15 +1,15 @@
 import logging
 import threading
 from typing import Optional
-from datetime import timedelta
+from datetime import timedelta, datetime
 
+import pymodbus
 from pymodbus.client import ModbusTcpClient
-from pymodbus.constants import Endian
 
 from homeassistant.core import callback
 from homeassistant.helpers.event import async_track_time_interval
 from .const import (
-    MAX_DEVICES,
+    MAX_DEVICES, DEFAULT_MODBUS_TIMEOUT
 )
 from .fandevice import FanDevice
 
@@ -32,7 +32,8 @@ class FanMaster:
         self._lock = threading.Lock()
         self._name = name
         self._address = address
-        self._scan_interval = timedelta(seconds=scan_interval)
+        self._scan_interval = timedelta(seconds=scan_interval)        
+        self._last_data_received_timestamp = datetime(year=2000, month=1, day=1)
         self._unsub_interval_method = None
         self._sensors = []
         self.slaves = []
@@ -110,13 +111,24 @@ class FanMaster:
             self._unsub_interval_method()
             self._unsub_interval_method = None
             self.close()
-
+                
     async def async_refresh_modbus_data(self, _now: Optional[int] = None) -> dict:
         """Time to update."""
         result : bool = await self._hass.async_add_executor_job(self._refresh_modbus_data)
         if result:
+            self._last_data_received_timestamp = datetime.now()
             for update_callback in self._sensors:
                 update_callback()
+        
+        if (datetime.now() - self._last_data_received_timestamp).total_seconds() > DEFAULT_MODBUS_TIMEOUT:
+            #set all data to None so entities get unavailable
+            for sensor in self._sensors:
+                _data = getattr(sensor, "_data", None)
+                if _data is not None:
+                    sensor._data = None
+                _modbus_data_updated = getattr(sensor, "_modbus_data_updated", None)
+                if callable(_modbus_data_updated):
+                    sensor._modbus_data_updated()
 
 
     def _refresh_modbus_data(self, _now: Optional[int] = None) -> bool:
@@ -170,10 +182,13 @@ class FanMaster:
 
     def read_holding_registers(self, unit, address, count):
         """Read holding registers."""
-        with self._lock:
-            return self._client.read_holding_registers(
-                address=address, count=count, slave=unit
-            )
+        try:
+            with self._lock:
+                return self._client.read_holding_registers(
+                    address=address, count=count, slave=unit
+                )
+        except BrokenPipeError:
+            self.close()
 
     def write_registers(self, unit, address, payload):
         """Write registers."""
@@ -190,17 +205,25 @@ class FanMaster:
             )
             
     def read_modbus_data(self):
-        return (
-            self.read_modbus_data_master_sw_Version()
-            and self.read_modbus_data_master_dtc_active()
-            and self.read_modbus_data_master_codingList()
-            and self.updateDeviceList()
-            and self.read_modbus_data_master_locations()
-            and self.read_modbus_data_master_worst_dewpoint()
-            and self.read_modbus_data_master_lowest_supply()
-            and self.read_modbus_data_master_cooling_locked()
-            and self.read_modbus_data_slaves()
-        )
+        _LOGGER.debug("Modbus read Start")
+        result = False
+        try:
+            return (
+                self.read_modbus_data_master_sw_Version()
+                and self.read_modbus_data_master_dtc_active()
+                and self.read_modbus_data_master_codingList()
+                and self.updateDeviceList()
+                and self.read_modbus_data_master_locations()
+                and self.read_modbus_data_master_worst_dewpoint()
+                and self.read_modbus_data_master_lowest_supply()
+                and self.read_modbus_data_master_cooling_locked()
+                and self.read_modbus_data_slaves()
+            )
+        except (BrokenPipeError, pymodbus.exceptions.ModbusIOException):
+            self.close()
+
+        _LOGGER.debug("Modbus read End")
+        return result
 
     def read_modbus_data_slaves(self):
         """start reading data"""
