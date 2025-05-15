@@ -117,18 +117,24 @@ class FanMaster:
         result : bool = await self._hass.async_add_executor_job(self._refresh_modbus_data)
         if result:
             self._last_data_received_timestamp = datetime.now()
-            for update_callback in self._sensors:
-                update_callback()
+            
         
         if (datetime.now() - self._last_data_received_timestamp).total_seconds() > DEFAULT_MODBUS_TIMEOUT:
             #set all data to None so entities get unavailable
-            for sensor in self._sensors:
-                _data = getattr(sensor, "_data", None)
-                if _data is not None:
-                    sensor._data = None
-                _modbus_data_updated = getattr(sensor, "_modbus_data_updated", None)
-                if callable(_modbus_data_updated):
-                    sensor._modbus_data_updated()
+            
+            self.data = dict.fromkeys(self.data, None)
+            
+            for slave in self.slaves:
+                slave.data = dict.fromkeys(slave.data, None)
+            
+            #for date in self.data:
+            #    date = None
+            #for slave in self.slaves:
+            #    for date in slave.data:
+            #        date = None
+                    
+        for update_callback in self._sensors:
+            update_callback()
 
 
     def _refresh_modbus_data(self, _now: Optional[int] = None) -> bool:
